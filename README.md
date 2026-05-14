@@ -17,14 +17,19 @@ Generating realistic human motion is a central yet unsolved challenge in video g
 
 | Asset | Hugging Face | Notes |
 |---|---|---|
-| **PhyMotion-CausalForcing-1.3B** LoRA (step 210) | [`6kplus/PhyMotion-CausalForcing-1.3B`](https://huggingface.co/6kplus/PhyMotion-CausalForcing-1.3B) | LoRA adapter for the Causal Forcing 1.3B base, post-trained with the PhyMotion reward. |
-| **MotionX prompts** (1123 captions) | Same repo, `data/motionx_prompts.txt` | Prompt set used for both training rollout and evaluation. |
+| **PhyMotion-CausalForcing-1.3B** LoRA (step 210) | [`6kplus/PhyMotion-CausalForcing-1.3B`](https://huggingface.co/6kplus/PhyMotion-CausalForcing-1.3B) (model) | LoRA adapter for the Causal Forcing 1.3B base, post-trained with the PhyMotion reward. |
+| **MotionX prompts** (train 21,348 / test 1,123) | [`6kplus/PhyMotion-MotionX-Prompts`](https://huggingface.co/datasets/6kplus/PhyMotion-MotionX-Prompts) (dataset) | `train.txt` is used for RL rollout during post-training; `test.txt` is used for evaluation. |
 
-Download both with one command:
+Download both:
 
 ```
+# LoRA adapter
 huggingface-cli download 6kplus/PhyMotion-CausalForcing-1.3B \
   --local-dir checkpoints/phymotion-s210
+
+# Train + test prompt splits
+huggingface-cli download 6kplus/PhyMotion-MotionX-Prompts \
+  --repo-type dataset --local-dir dataset/motionx
 ```
 
 
@@ -73,21 +78,20 @@ mkdir -p checkpoints/casualforcing/chunkwise
 #   checkpoints/casualforcing/chunkwise/causal_forcing.pt
 ```
 
-5. (Optional) Download our pretrained PhyMotion-CausalForcing-1.3B LoRA + the MotionX prompt list from Hugging Face:
+5. (Optional) Download our pretrained PhyMotion-CausalForcing-1.3B LoRA + the MotionX prompt splits from Hugging Face:
 
 ```
+# LoRA adapter (700 MB)
 huggingface-cli download 6kplus/PhyMotion-CausalForcing-1.3B \
-  adapter_config.json adapter_model.bin \
   --local-dir checkpoints/phymotion-s210
 
-huggingface-cli download 6kplus/PhyMotion-CausalForcing-1.3B \
-  data/motionx_prompts.txt \
-  --local-dir dataset/motionx
-mv dataset/motionx/data/motionx_prompts.txt dataset/motionx/test.txt
+# Prompt splits: train.txt (21,348) and test.txt (1,123)
+huggingface-cli download 6kplus/PhyMotion-MotionX-Prompts \
+  --repo-type dataset --local-dir dataset/motionx
 ```
 
-If you want to train from scratch on your own prompt list instead, just place a
-one-prompt-per-line file at `dataset/motionx/test.txt`.
+To train on your own prompt list instead, drop your one-prompt-per-line files at
+`dataset/motionx/train.txt` and `dataset/motionx/test.txt`.
 
 
 ## Hardware and Reference Runtimes
