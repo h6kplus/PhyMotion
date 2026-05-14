@@ -35,14 +35,34 @@ huggingface-cli download 6kplus/PhyMotion-MotionX-Prompts \
 
 ## Environment Setup
 
-1. Create the Python environment and install dependencies.
+1. Create the Python environment and install dependencies. `requirements.txt` covers the full stack including MuJoCo 3.3.6 and SMPL-X — no separate steps needed.
 
 ```
-conda create -n phymotion python=3.10
+conda create -n phymotion python=3.10 -y
 conda activate phymotion
 pip install torch==2.6.0 torchvision==0.21.0 --index-url https://download.pytorch.org/whl/cu124
 pip install -r requirements.txt
 pip install flash-attn==2.7.4.post1 --no-build-isolation
+```
+
+> **Troubleshooting `flash-attn`.** Some clusters have `~/.cache` on a different
+> filesystem from `$TMPDIR`, which makes `pip install flash-attn` fail with
+> `[Errno 18] Invalid cross-device link` when it tries to copy the prebuilt
+> wheel into the cache. If that happens, either set `TMPDIR` to the same
+> filesystem as `~/.cache`, **or** download and install the wheel directly:
+>
+> ```
+> wget https://github.com/Dao-AILab/flash-attention/releases/download/v2.7.4.post1/flash_attn-2.7.4.post1+cu12torch2.6cxx11abiFALSE-cp310-cp310-linux_x86_64.whl
+> pip install flash_attn-2.7.4.post1+cu12torch2.6cxx11abiFALSE-cp310-cp310-linux_x86_64.whl --no-build-isolation
+> ```
+
+Quick sanity check the env:
+
+```
+python -c "import torch, flash_attn, mujoco, smplx; \
+print(f'torch={torch.__version__} cuda={torch.cuda.is_available()}, flash_attn={flash_attn.__version__}, mujoco={mujoco.__version__}')"
+# Expected output:
+# torch=2.6.0+cu124 cuda=True, flash_attn=2.7.4.post1, mujoco=3.3.6
 ```
 
 2. Install GVHMR. The reward calls GVHMR in-process to recover SMPL-X meshes from generated frames.
@@ -57,18 +77,10 @@ export GVHMR_ROOT=~/GVHMR
 
 The training script and the reward module read `GVHMR_ROOT` from the environment.
 
-3. Install MuJoCo (used by the contact and dynamic axes). MuJoCo ships as a regular pip package — no system-level setup is needed:
-
-```
-pip install mujoco==3.3.6
-# Verify:
-python -c "import mujoco; print(mujoco.__version__)"
-```
-
 The humanoid MJCF model used to retarget SMPL is bundled inside this repo
 (`astrolabe/scorers/video/`), so no additional asset is required.
 
-4. Download the base video generator. We train on top of Causal Forcing 1.3B (the autoregressive distilled version of Wan2.1 T2V-1.3B).
+3. Download the base video generator. We train on top of Causal Forcing 1.3B (the autoregressive distilled version of Wan2.1 T2V-1.3B).
 
 ```
 mkdir -p checkpoints/casualforcing/chunkwise
@@ -78,7 +90,7 @@ mkdir -p checkpoints/casualforcing/chunkwise
 #   checkpoints/casualforcing/chunkwise/causal_forcing.pt
 ```
 
-5. (Optional) Download our pretrained PhyMotion-CausalForcing-1.3B LoRA + the MotionX prompt splits from Hugging Face:
+4. (Optional) Download our pretrained PhyMotion-CausalForcing-1.3B LoRA + the MotionX prompt splits from Hugging Face:
 
 ```
 # LoRA adapter (700 MB)
