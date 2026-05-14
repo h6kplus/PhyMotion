@@ -13,6 +13,21 @@ Generating realistic human motion is a central yet unsolved challenge in video g
 </p>
 
 
+## Pretrained Checkpoints and Data
+
+| Asset | Hugging Face | Notes |
+|---|---|---|
+| **PhyMotion-CausalForcing-1.3B** LoRA (step 210) | [`6kplus/PhyMotion-CausalForcing-1.3B`](https://huggingface.co/6kplus/PhyMotion-CausalForcing-1.3B) | LoRA adapter for the Causal Forcing 1.3B base, post-trained with the PhyMotion reward. |
+| **MotionX prompts** (1123 captions) | Same repo, `data/motionx_prompts.txt` | Prompt set used for both training rollout and evaluation. |
+
+Download both with one command:
+
+```
+huggingface-cli download 6kplus/PhyMotion-CausalForcing-1.3B \
+  --local-dir checkpoints/phymotion-s210
+```
+
+
 ## Environment Setup
 
 1. Create the Python environment and install dependencies.
@@ -28,21 +43,72 @@ pip install flash-attn==2.7.4.post1 --no-build-isolation
 2. Install GVHMR. The reward calls GVHMR in-process to recover SMPL-X meshes from generated frames.
 
 ```
-git clone https://github.com/zju3dv/GVHMR.git /path/to/GVHMR
-# Follow GVHMR's README to download inputs/checkpoints/ (~9 GB).
-export GVHMR_ROOT=/path/to/GVHMR
+git clone https://github.com/zju3dv/GVHMR.git ~/GVHMR
+# Follow GVHMR's README to download inputs/checkpoints/ (~9 GB). GVHMR ships
+# its own SMPL-X body model files inside that checkpoint bundle, so installing
+# GVHMR is sufficient — no separate SMPL-X download is required for PhyMotion.
+export GVHMR_ROOT=~/GVHMR
 ```
 
 The training script and the reward module read `GVHMR_ROOT` from the environment.
 
-3. Download the base video generator. We train on top of Causal Forcing 1.3B (the autoregressive distilled version of Wan2.1 T2V-1.3B).
+3. Install MuJoCo (used by the contact and dynamic axes). MuJoCo ships as a regular pip package — no system-level setup is needed:
+
+```
+pip install mujoco==3.3.6
+# Verify:
+python -c "import mujoco; print(mujoco.__version__)"
+```
+
+The humanoid MJCF model used to retarget SMPL is bundled inside this repo
+(`astrolabe/scorers/video/`), so no additional asset is required.
+
+4. Download the base video generator. We train on top of Causal Forcing 1.3B (the autoregressive distilled version of Wan2.1 T2V-1.3B).
 
 ```
 mkdir -p checkpoints/casualforcing/chunkwise
-# Place causal_forcing.pt here. See the project page for the download link.
+# The base checkpoint and inference code are released by the Causal Forcing authors;
+# see https://github.com/SHI-Labs/Causal-Forcing for the latest download link.
+# Place the resulting causal_forcing.pt at:
+#   checkpoints/casualforcing/chunkwise/causal_forcing.pt
 ```
 
-4. Prepare the training prompt list. We use the MotionX human-motion test split (1123 prompts) for rollout and evaluation. Provide your own one-prompt-per-line file at `dataset/motionx/test.txt`.
+5. (Optional) Download our pretrained PhyMotion-CausalForcing-1.3B LoRA + the MotionX prompt list from Hugging Face:
+
+```
+huggingface-cli download 6kplus/PhyMotion-CausalForcing-1.3B \
+  adapter_config.json adapter_model.bin \
+  --local-dir checkpoints/phymotion-s210
+
+huggingface-cli download 6kplus/PhyMotion-CausalForcing-1.3B \
+  data/motionx_prompts.txt \
+  --local-dir dataset/motionx
+mv dataset/motionx/data/motionx_prompts.txt dataset/motionx/test.txt
+```
+
+If you want to train from scratch on your own prompt list instead, just place a
+one-prompt-per-line file at `dataset/motionx/test.txt`.
+
+
+## Hardware and Reference Runtimes
+
+Our reported numbers were produced on:
+
+* **Hardware**: 1 node with 8× NVIDIA A100 80 GB, ~256 GB host RAM, fast local NVMe.
+* **OS**: Ubuntu 22.04 (Linux 6.8 kernel).
+* **CUDA**: 12.4; **Python**: 3.10; **PyTorch**: 2.6.0; **flash-attn**: 2.7.4.post1.
+
+Approximate per-stage compute / wall-clock:
+
+| Stage | Hardware | Wall clock |
+|---|---|---|
+| Stage 2 (RL post-training) | 8× A100 80 GB | ~12 hours for 210 steps (≈ 3.5 min/step at batch 8) |
+| Stage 3 (inference, 45 frames @ 480×832) | 1× A100 / RTX 4090 | ~5 seconds per video |
+| Stage 1 (reward, 1 video) | 1× A100 (GVHMR + MuJoCo) | ~3 seconds per video |
+
+The reward dominates training time: each RL step does 8 video rollouts (~40 s of generation) and
+8 reward calls (~25 s combined GVHMR + physics), so the reward is roughly 40 % of the per-step
+wall clock.
 
 
 ## Stage 1: PhyMotion Reward
@@ -99,9 +165,10 @@ Outputs are written to `logs/nft/<base_model>/<run_name>_<timestamp>/`:
 Roll out a trained LoRA on a list of prompts.
 
 ```
+# Using the released PhyMotion-CausalForcing-1.3B LoRA (step 210)
 torchrun --nproc_per_node=1 scripts/inference_wan.py \
   --base_model checkpoints/casualforcing/chunkwise/causal_forcing.pt \
-  --lora_path  logs/nft/wan_casual_chunk/<run_name>/checkpoints/checkpoint-<step> \
+  --lora_path  checkpoints/phymotion-s210 \
   --prompt_file prompts/sample.txt \
   --output_dir outputs/test \
   --num_frames 45 --height 480 --width 832 \
@@ -111,39 +178,21 @@ torchrun --nproc_per_node=1 scripts/inference_wan.py \
   --mixed_precision bf16 --seed 42
 ```
 
+To use your own freshly trained LoRA, point `--lora_path` at your checkpoint dir:
+
+```
+--lora_path  logs/nft/wan_casual_chunk/casual_forcing_video_phymotion_<TS>/checkpoints/checkpoint-210
+```
+
 * `--base_model`: path to the Causal Forcing 1.3B checkpoint.
 
 * `--lora_path`: a `checkpoint-<step>/` folder or its `lora/` subdir.
 
 * `--prompt_file`: a one-prompt-per-line text file.
 
-* `--output_dir`: directory for the generated mp4s.
+* `--output_dir`: directory for the generated mp4s. Expect ~5 seconds per video on a single A100.
 
 
-## Repository Layout
-
-```
-phymotion/
-├── astrolabe/                       # Reward + scorers
-│   ├── rewards.py                   # phymotion_score (headline reward)
-│   ├── ema.py
-│   ├── stat_tracking.py
-│   └── scorers/video/
-│       └── smpl_feasibility.py      # SMPL feasibility (kinematic / contact / dynamic)
-├── configs/                         # ml_collections training configs
-│   ├── base.py
-│   ├── _base_clean.py
-│   └── nft_casual_forcing.py        # Causal Forcing 1.3B + PhyMotion
-├── pipeline/                        # Inference pipelines
-│   ├── causal_inference.py          # Block-wise autoregressive sampler w/ KV-cache
-│   └── scene_causal_inference.py    # Multi-scene prompt switching
-├── scripts/
-│   ├── train_nft_wan.py             # RL post-training entry
-│   └── inference_wan.py             # T2V rollout with a trained LoRA
-├── utils/                           # Wan model wrappers + dataset / loss helpers
-├── assets/teaser.jpg
-└── requirements.txt
-```
 
 
 ## Citation
