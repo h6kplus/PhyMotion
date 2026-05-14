@@ -79,6 +79,20 @@ def casual_forcing_video_phymotion():
     return config
 
 
+def casual_forcing_video_phymotion_2GPU():
+    """Smaller 2-GPU variant of casual_forcing_video_phymotion for quick smoke runs."""
+    config = _get_config(
+        n_gpus=2, dataset="motionx",
+        reward_fn={"phymotion_score": 1.0},
+        name="casual_forcing_video_phymotion_2gpu",
+    )
+    config.beta = 0.1
+    config.eval_freq = 10
+    config.eval_batches = 5
+    config.train.learning_rate = 1e-5
+    return config
+
+
 def casual_forcing_video_smpl_kinematic():
     """Casual Forcing + SMPL Kinematic only - 8 GPU"""
     config = _get_config(
