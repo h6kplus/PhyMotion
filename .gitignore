@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+*.pyc
+.venv/
+
+# Heavy artifacts (not for git)
+checkpoints/
+reward_ckpts/
+logs/
+outputs/
+*.pt
+*.safetensors
+*.ckpt
+*.bin
+inputs/
+
+# Data
+dataset/
+prompts/*.txt
+!prompts/sample.txt
+!prompts/README.md
+
+# Working / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+nohup.out
+MUJOCO_LOG.TXT
+
+# Misc
+.ipynb_checkpoints/
+*.log
