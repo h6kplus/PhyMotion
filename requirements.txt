@@ -32,6 +32,7 @@ xformers
 absl-py
 ml_collections
 sentencepiece
+hydra-core
 hpsv3
 hpsv2x==1.2.0
 easydict
