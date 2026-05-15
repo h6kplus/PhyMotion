@@ -45,16 +45,6 @@ pip install -r requirements.txt
 pip install flash-attn==2.7.4.post1 --no-build-isolation
 ```
 
-> **Troubleshooting `flash-attn`.** Some clusters have `~/.cache` on a different
-> filesystem from `$TMPDIR`, which makes `pip install flash-attn` fail with
-> `[Errno 18] Invalid cross-device link` when it tries to copy the prebuilt
-> wheel into the cache. If that happens, either set `TMPDIR` to the same
-> filesystem as `~/.cache`, **or** download and install the wheel directly:
->
-> ```
-> wget https://github.com/Dao-AILab/flash-attention/releases/download/v2.7.4.post1/flash_attn-2.7.4.post1+cu12torch2.6cxx11abiFALSE-cp310-cp310-linux_x86_64.whl
-> pip install flash_attn-2.7.4.post1+cu12torch2.6cxx11abiFALSE-cp310-cp310-linux_x86_64.whl --no-build-isolation
-> ```
 
 Quick sanity check the env:
 
