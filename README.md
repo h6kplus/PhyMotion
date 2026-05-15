@@ -204,13 +204,7 @@ Approximate per-stage compute / wall-clock:
 
 ## Acknowledgements
 
-We thank the authors and maintainers of the following open-source projects, which this codebase builds upon:
-
-* **Astrolabe**: provides the core RL / reward-training infrastructure used in our implementation.
-* **FastVideo**: provides efficient video generation and training utilities that support our post-training pipeline.
-* **GVHMR**: provides the human mesh recovery component used to lift generated videos into SMPL-X trajectories for PhyMotion reward computation.
-
-We are grateful to these projects for making their code publicly available.
+This codebase builds on several excellent open-source projects. We thank the authors and maintainers of [Astrolabe](https://github.com/franklinz233/Astrolabe) for the RL / reward-training infrastructure, [FastVideo](https://github.com/hao-ai-lab/fastvideo) for efficient video generation and training utilities, and [GVHMR](https://github.com/zju3dv/GVHMR) for human mesh recovery used in our 3D motion reward pipeline. Their publicly released code made this work possible.
 
 ## Citation
 
