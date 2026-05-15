@@ -202,6 +202,16 @@ Approximate per-stage compute / wall-clock:
 | Stage 1 (reward, 1 video) | 1× A100 (GVHMR + MuJoCo) | ~3 seconds per video |
 
 
+## Acknowledgements
+
+We thank the authors and maintainers of the following open-source projects, which this codebase builds upon:
+
+* **Astrolabe**: provides the core RL / reward-training infrastructure used in our implementation.
+* **FastVideo**: provides efficient video generation and training utilities that support our post-training pipeline.
+* **GVHMR**: provides the human mesh recovery component used to lift generated videos into SMPL-X trajectories for PhyMotion reward computation.
+
+We are grateful to these projects for making their code publicly available.
+
 ## Citation
 
 If you find this work useful, please consider citing:
