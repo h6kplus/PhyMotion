@@ -25,7 +25,7 @@ Download both:
 ```bash
 # LoRA adapter
 huggingface-cli download 6kplus/PhyMotion-CausalForcing-1.3B \
-  --local-dir checkpoints/phymotion-casaulforcing
+  --local-dir checkpoints/phymotion-causalforcing
 
 # Train + test prompt splits
 huggingface-cli download 6kplus/PhyMotion-MotionX-Prompts \
@@ -91,7 +91,7 @@ mkdir -p checkpoints/casualforcing/chunkwise
 ```bash
 # LoRA adapter (700 MB)
 huggingface-cli download 6kplus/PhyMotion-CausalForcing-1.3B \
-  --local-dir checkpoints/phymotion-casaulforcing
+  --local-dir checkpoints/phymotion-causalforcing
 
 # Prompt splits: train.txt (21,348) and test.txt (1,123)
 huggingface-cli download 6kplus/PhyMotion-MotionX-Prompts \
@@ -161,7 +161,7 @@ Roll out a trained LoRA on a list of prompts.
 # Using the released PhyMotion-CausalForcing-1.3B LoRA 
 torchrun --nproc_per_node=1 scripts/inference_wan.py \
   --base_model checkpoints/casualforcing/chunkwise/causal_forcing.pt \
-  --lora_path  checkpoints/phymotion-casaulforcing \
+  --lora_path  checkpoints/phymotion-causalforcing \
   --prompt_file prompts/sample.txt \
   --output_dir outputs/test \
   --num_frames 45 --height 480 --width 832 \
@@ -174,7 +174,7 @@ torchrun --nproc_per_node=1 scripts/inference_wan.py \
 To use your own freshly trained LoRA, point `--lora_path` at your checkpoint dir:
 
 ```bash
---lora_path  logs/nft/wan_casual_chunk/casual_forcing_video_phymotion_<TS>/checkpoints/phymotion-casaulforcing
+--lora_path  logs/nft/wan_casual_chunk/casual_forcing_video_phymotion_<TS>/checkpoints/phymotion-causalforcing
 ```
 
 * `--base_model`: path to the Causal Forcing 1.3B checkpoint.
