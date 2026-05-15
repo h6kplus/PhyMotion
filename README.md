@@ -102,25 +102,6 @@ To train on your own prompt list instead, drop your one-prompt-per-line files at
 `dataset/motionx/train.txt` and `dataset/motionx/test.txt`.
 
 
-## Hardware and Reference Runtimes
-
-Our reported numbers were produced on:
-
-* **Hardware**: 1 node with 8× NVIDIA A100 80 GB, ~256 GB host RAM, fast local NVMe.
-* **OS**: Ubuntu 22.04 (Linux 6.8 kernel).
-* **CUDA**: 12.4; **Python**: 3.10; **PyTorch**: 2.6.0; **flash-attn**: 2.7.4.post1.
-
-Approximate per-stage compute / wall-clock:
-
-| Stage | Hardware | Wall clock |
-|---|---|---|
-| Stage 2 (RL post-training) | 8× A100 80 GB | ~12 hours for 210 steps (≈ 3.5 min/step at batch 8) |
-| Stage 3 (inference, 45 frames @ 480×832) | 1× A100 / RTX 4090 | ~5 seconds per video |
-| Stage 1 (reward, 1 video) | 1× A100 (GVHMR + MuJoCo) | ~3 seconds per video |
-
-The reward dominates training time: each RL step does 8 video rollouts (~40 s of generation) and
-8 reward calls (~25 s combined GVHMR + physics), so the reward is roughly 40 % of the per-step
-wall clock.
 
 
 ## Stage 1: PhyMotion Reward
@@ -205,6 +186,20 @@ To use your own freshly trained LoRA, point `--lora_path` at your checkpoint dir
 * `--output_dir`: directory for the generated mp4s. Expect ~5 seconds per video on a single A100.
 
 
+## Hardware and Reference Runtimes
+
+Our reported numbers were produced on:
+
+* **Hardware**: 1 node with 8× NVIDIA A100 80 GB
+* **CUDA**: 12.4; **Python**: 3.10; **PyTorch**: 2.6.0; **flash-attn**: 2.7.4.post1.
+
+Approximate per-stage compute / wall-clock:
+
+| Stage | Hardware | Wall clock |
+|---|---|---|
+| Stage 2 (RL post-training) | 8× A100 80 GB | ~60 hours for 330 steps (≈ 10 min/step at batch 8) |
+| Stage 3 (inference, 45 frames @ 480×832) | 1× A100 / RTX 4090 | ~5 seconds per video |
+| Stage 1 (reward, 1 video) | 1× A100 (GVHMR + MuJoCo) | ~3 seconds per video |
 
 
 ## Citation
@@ -222,7 +217,3 @@ If you find this work useful, please consider citing:
 }
 ```
 
-
-## License
-
-Code is released under the MIT license. The base models, GVHMR, and MotionX prompts retain their own licenses; see their respective repositories for details.
