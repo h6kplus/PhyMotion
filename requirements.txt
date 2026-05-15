@@ -40,6 +40,13 @@ safetensors
 imageio
 imageio-ffmpeg
 
+# PhyMotion reward dependencies (SMPL recovery + MuJoCo physics)
+mujoco==3.3.6
+smplx==0.1.28
+pyrender==0.1.45
+trimesh==4.5.3
+# mesh-intersection is built from source; see the README.
+
 # Development dependencies
 ipython==8.34.0
 black==24.2.0

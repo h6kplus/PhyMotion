@@ -180,28 +180,6 @@ def motion_smoothness_score(device):
 
     return _fn
 
-def dynamic_degree_score(device):
-    from astrolabe.scorers.video.dynamic_degree import DynamicDegreeScorer
-    ckpt_path = ""  # set to checkpoint path if a pretrained model is available
-    scorer = DynamicDegreeScorer(device=device, model_path=ckpt_path)
-
-    def _fn(videos, prompts, metadata=None):
-        # Normalize to Tensor [B, C, T, H, W] in range [0, 1]
-        if not isinstance(videos, torch.Tensor):
-            videos = torch.from_numpy(videos).permute(0, 4, 1, 2, 3)  # (B,F,H,W,C) -> (B,C,F,H,W)
-        else:
-            if videos.ndim == 5 and videos.shape[1] != 3 and videos.shape[2] == 3:
-                videos = videos.permute(0, 2, 1, 3, 4)  # (B,F,C,H,W) -> (B,C,F,H,W)
-
-        if videos.dtype == torch.uint8:
-            videos = videos.float() / 255.0
-
-        scores = scorer(videos)
-        return scores.cpu().tolist(), {}
-
-    return _fn
-
-
 def unifiedreward_score_sglang(device):
     # Requires a running sglang server:
     #   python -m sglang.launch_server --model-path CodeGoat24/UnifiedReward-7b-v1.5
@@ -590,34 +568,6 @@ def phymotion_score(device):
     return _fn
 
 
-def videophy_pc_score(device):
-    """Score videos by VideoPhy-2 Physical Consistency.
-
-    Uses the zero-I/O VideoPhyScorer (no mp4 read/write — works directly on
-    in-memory tensors). Output is the VLM's discrete 1-5 rating, normalized
-    to [0, 1] for advantage stability.
-    """
-    from astrolabe.scorers.video.videophy import VideoPhyScorer
-    scorer = VideoPhyScorer(device=device, dtype=torch.bfloat16, task="pc")
-
-    def _fn(videos, prompts, metadata=None):
-        # Accept (B, F, C, H, W) tensor or numpy/list — convert to uint8 (T,3,H,W) list
-        if not isinstance(videos, torch.Tensor):
-            videos = torch.from_numpy(videos)
-            if videos.shape[-1] == 3:  # (B, F, H, W, 3) -> (B, F, 3, H, W)
-                videos = videos.permute(0, 1, 4, 2, 3)
-        if videos.dtype != torch.uint8:
-            videos = (videos.clamp(0, 1) * 255).round().clamp(0, 255).to(torch.uint8)
-        video_list = [v for v in videos]  # each: (F, 3, H, W) uint8
-
-        raw = scorer(video_list)  # (B,) in [0, 5]; 0 means parse failure
-        # Normalize 1..5 → 0..1; clip parse failures (0) to 0.
-        normalized = ((raw - 1.0) / 4.0).clamp(min=0.0, max=1.0)
-        return normalized.tolist(), {"videophy_pc_raw": raw.tolist()}
-
-    return _fn
-
-
 def constant_score(device):
     """Constant-reward baseline for measuring training overhead with reward
     cost set to ~zero (everything in the trainer except the reward model).
@@ -644,12 +594,10 @@ def multi_score(device, score_dict):
         "videoalign_vq_score": videoalign_vq_score,
         "videoalign_mq_score": videoalign_mq_score,
         "videoalign_ta_score": videoalign_ta_score,
-        "dynamic_degree_score": dynamic_degree_score,
         "smpl_physics_score": smpl_physics_score,
         "smpl_dynamic_score": smpl_dynamic_score,
         "smpl_kinematic_score": smpl_kinematic_score,
         "phymotion_score": phymotion_score,
-        "videophy_pc_score": videophy_pc_score,
         "constant_score": constant_score,
     }
     score_fns = {name: score_functions[name](device) for name in score_dict}

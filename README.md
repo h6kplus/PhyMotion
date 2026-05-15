@@ -4,7 +4,7 @@
 
 \* Equal contribution.
 
-* [Project page](https://phy-motion.github.io) · [Arxiv](#) · [Code](https://github.com/h6kplus/PhyMotion)
+* [Project page](https://phy-motion.github.io) · [Arxiv](#) · [Model](https://huggingface.co/6kplus/PhyMotion-CausalForcing-1.3B) · [Dataset](https://huggingface.co/datasets/6kplus/PhyMotion-MotionX-Prompts)
 
 Generating realistic human motion is a central yet unsolved challenge in video generation. While reinforcement learning (RL)-based post-training has driven recent gains in general video quality, extending it to human motion remains bottlenecked by a reward signal that cannot reliably score motion realism. Existing video rewards primarily rely on 2D perceptual signals, without explicitly modeling the 3D body state, contact, and dynamics underlying articulated human motion, and often assign high scores to videos with floating bodies or physically implausible movements. To address this, we propose PhyMotion, a structured, fine-grained motion reward that grounds recovered 3D human trajectories in a physics simulator and evaluates motion quality along multiple dimensions of physical feasibility. Concretely, we recover SMPL body meshes from generated videos, retarget them onto a humanoid in the MuJoCo physics simulator, and evaluate the resulting motion along three axes: kinematic plausibility, contact and balance consistency, and dynamic feasibility. Each component provides a continuous and interpretable signal tied to a specific aspect of motion quality, allowing the reward to capture which aspects of motion are physically correct or violated. Experiments show that PhyMotion achieves stronger correlation with human judgments than existing reward formulations. These gains carry over to RL-based post-training, where optimizing PhyMotion leads to larger and more consistent improvements than optimizing existing rewards, improving motion realism across both autoregressive and bidirectional video generators under both automatic metrics and blind human evaluation (+68 Elo gain). Ablations show that the three axes provide complementary supervision signals, while the reward preserves overall video generation quality with only modest training overhead.
 
@@ -22,7 +22,7 @@ Generating realistic human motion is a central yet unsolved challenge in video g
 
 Download both:
 
-```
+```bash
 # LoRA adapter
 huggingface-cli download 6kplus/PhyMotion-CausalForcing-1.3B \
   --local-dir checkpoints/phymotion-s210
@@ -37,7 +37,7 @@ huggingface-cli download 6kplus/PhyMotion-MotionX-Prompts \
 
 1. Create the Python environment and install dependencies. `requirements.txt` covers the full stack including MuJoCo 3.3.6 and SMPL-X — no separate steps needed.
 
-```
+```bash
 conda create -n phymotion python=3.10 -y
 conda activate phymotion
 pip install torch==2.6.0 torchvision==0.21.0 --index-url https://download.pytorch.org/whl/cu124
@@ -58,7 +58,7 @@ pip install flash-attn==2.7.4.post1 --no-build-isolation
 
 Quick sanity check the env:
 
-```
+```bash
 python -c "import torch, flash_attn, mujoco, smplx; \
 print(f'torch={torch.__version__} cuda={torch.cuda.is_available()}, flash_attn={flash_attn.__version__}, mujoco={mujoco.__version__}')"
 # Expected output:
@@ -67,7 +67,7 @@ print(f'torch={torch.__version__} cuda={torch.cuda.is_available()}, flash_attn={
 
 2. Install GVHMR. The reward calls GVHMR in-process to recover SMPL-X meshes from generated frames.
 
-```
+```bash
 git clone https://github.com/zju3dv/GVHMR.git ~/GVHMR
 # Follow GVHMR's README to download inputs/checkpoints/ (~9 GB). GVHMR ships
 # its own SMPL-X body model files inside that checkpoint bundle, so installing
@@ -80,9 +80,15 @@ The training script and the reward module read `GVHMR_ROOT` from the environment
 The humanoid MJCF model used to retarget SMPL is bundled inside this repo
 (`astrolabe/scorers/video/`), so no additional asset is required.
 
-3. Download the base video generator. We train on top of Causal Forcing 1.3B (the autoregressive distilled version of Wan2.1 T2V-1.3B).
+3. Download the **Wan2.1 T2V-1.3B** base components (transformer config, VAE, and UMT5-XXL text encoder). ~17 GB.
 
+```bash
+huggingface-cli download Wan-AI/Wan2.1-T2V-1.3B --local-dir wan_models/Wan2.1-T2V-1.3B
 ```
+
+4. Download the **Causal Forcing 1.3B** sampler weights (the autoregressive distilled version of Wan2.1 T2V-1.3B). PhyMotion's RL post-training starts from this.
+
+```bash
 mkdir -p checkpoints/casualforcing/chunkwise
 # The base checkpoint and inference code are released by the Causal Forcing authors;
 # see https://github.com/SHI-Labs/Causal-Forcing for the latest download link.
@@ -90,9 +96,9 @@ mkdir -p checkpoints/casualforcing/chunkwise
 #   checkpoints/casualforcing/chunkwise/causal_forcing.pt
 ```
 
-4. (Optional) Download our pretrained PhyMotion-CausalForcing-1.3B LoRA + the MotionX prompt splits from Hugging Face:
+5. (Optional) Download our pretrained PhyMotion-CausalForcing-1.3B LoRA + the MotionX prompt splits from Hugging Face:
 
-```
+```bash
 # LoRA adapter (700 MB)
 huggingface-cli download 6kplus/PhyMotion-CausalForcing-1.3B \
   --local-dir checkpoints/phymotion-s210
@@ -141,13 +147,13 @@ The final reward is the mean of the three axes. All feasibility code (joint-base
 
 To wire the reward into a config:
 
-```
+```bash
 config.reward_fn = {"phymotion_score": 1.0}
 ```
 
 To combine with a perceptual reward (e.g. HPSv3) for balanced training:
 
-```
+```bash
 config.reward_fn = {
     "phymotion_score":   1.0,
     "video_hpsv3_local": 1.0,
@@ -159,7 +165,7 @@ config.reward_fn = {
 
 Launch RL post-training of Causal Forcing 1.3B with the PhyMotion reward.
 
-```
+```bash
 export GVHMR_ROOT=/path/to/GVHMR
 torchrun --nproc_per_node=8 scripts/train_nft_wan.py \
   --config configs/nft_casual_forcing.py:casual_forcing_video_phymotion
@@ -180,7 +186,7 @@ Outputs are written to `logs/nft/<base_model>/<run_name>_<timestamp>/`:
 
 Roll out a trained LoRA on a list of prompts.
 
-```
+```bash
 # Using the released PhyMotion-CausalForcing-1.3B LoRA (step 210)
 torchrun --nproc_per_node=1 scripts/inference_wan.py \
   --base_model checkpoints/casualforcing/chunkwise/causal_forcing.pt \
@@ -196,7 +202,7 @@ torchrun --nproc_per_node=1 scripts/inference_wan.py \
 
 To use your own freshly trained LoRA, point `--lora_path` at your checkpoint dir:
 
-```
+```bash
 --lora_path  logs/nft/wan_casual_chunk/casual_forcing_video_phymotion_<TS>/checkpoints/checkpoint-210
 ```
 
