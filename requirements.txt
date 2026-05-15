@@ -20,7 +20,7 @@ matplotlib==3.10.0
 deepspeed==0.16.4
 peft==0.10.0
 bitsandbytes==0.45.3
-aiohttp==3.11.13
+aiohttp==3.11.16
 fastapi==0.115.11
 uvicorn==0.34.0
 huggingface-hub==0.29.1
@@ -33,6 +33,7 @@ absl-py
 ml_collections
 sentencepiece
 hydra-core
+hydra-zen
 hpsv3
 hpsv2x==1.2.0
 easydict

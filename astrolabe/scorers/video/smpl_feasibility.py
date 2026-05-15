@@ -182,7 +182,10 @@ class SMPLPhysicsChecker:
     
     def __init__(
         self,
-        smplx_model_path: str = "/nas-ssd2/owenh/GMR/assets/body_models",
+        smplx_model_path: str = os.path.join(
+            os.environ.get("GVHMR_ROOT", ""),
+            "inputs", "checkpoints", "body_models"
+        ),
         friction_coefficient: float = 0.7,
         gravity: float = 9.81,
         contact_velocity_threshold: float = 0.05,  # m/s
@@ -1326,9 +1329,11 @@ FRICTION_MU = 0.7
 BODY_MASS = 71.79     # actually populated from the model at load time
 GRAVITY = 9.81
 
-DEFAULT_MJCF = (
-    "/nas-ssd2/owenh/PHC/phc/data/assets/mjcf/smpl_humanoid.xml"
+DEFAULT_MJCF = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    "assets", "mjcf", "smpl_humanoid.xml"
 )
+
 
 
 @dataclass

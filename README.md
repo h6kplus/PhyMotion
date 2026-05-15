@@ -59,13 +59,40 @@ print(f'torch={torch.__version__} cuda={torch.cuda.is_available()}, flash_attn={
 
 ```bash
 git clone https://github.com/zju3dv/GVHMR.git ~/GVHMR
-# Follow GVHMR's README to download inputs/checkpoints/ (~9 GB). GVHMR ships
-# its own SMPL-X body model files inside that checkpoint bundle, so installing
-# GVHMR is sufficient — no separate SMPL-X download is required for PhyMotion.
 export GVHMR_ROOT=~/GVHMR
 ```
 
-The training script and the reward module read `GVHMR_ROOT` from the environment.
+Download the GVHMR checkpoint bundle (~9 GB) from HuggingFace:
+
+```bash
+for ckpt in \
+  gvhmr/gvhmr_siga24_release.ckpt \
+  hmr2/epoch=10-step=25000.ckpt \
+  vitpose/vitpose-h-multi-coco.pth \
+  yolo/yolov8x.pt; do
+  huggingface-cli download camenduru/GVHMR "$ckpt" \
+    --local-dir $GVHMR_ROOT/inputs/checkpoints
+done
+```
+
+**SMPL-X body models (required):** The GVHMR bundle does *not* include the SMPL-X body model files — these must be obtained separately.
+
+1. Register (free academic license) at https://smpl-x.is.tue.mpg.de/ and download the SMPL-X model zip.
+2. Extract and place the following three files:
+
+```
+$GVHMR_ROOT/inputs/checkpoints/body_models/smplx/SMPLX_NEUTRAL.npz
+$GVHMR_ROOT/inputs/checkpoints/body_models/smplx/SMPLX_MALE.npz
+$GVHMR_ROOT/inputs/checkpoints/body_models/smplx/SMPLX_FEMALE.npz
+```
+
+The training script and reward module read `GVHMR_ROOT` from the environment.
+
+After GVHMR's pip dependencies are resolved, pin scipy to avoid a numpy/ufunc incompatibility:
+
+```bash
+pip install --force-reinstall scipy==1.15.2
+```
 
 The humanoid MJCF model used to retarget SMPL is bundled inside this repo
 (`astrolabe/scorers/video/`), so no additional asset is required.
@@ -76,14 +103,13 @@ The humanoid MJCF model used to retarget SMPL is bundled inside this repo
 huggingface-cli download Wan-AI/Wan2.1-T2V-1.3B --local-dir wan_models/Wan2.1-T2V-1.3B
 ```
 
-4. Download the **Causal Forcing 1.3B** sampler weights (the autoregressive distilled version of Wan2.1 T2V-1.3B). PhyMotion's RL post-training starts from this.
+4. Download the **Causal Forcing 1.3B** sampler weights (the autoregressive distilled version of Wan2.1 T2V-1.3B). PhyMotion's RL post-training starts from this. (~5.3 GB)
 
 ```bash
-mkdir -p checkpoints/casualforcing/chunkwise
-# The base checkpoint and inference code are released by the Causal Forcing authors;
-# see https://github.com/SHI-Labs/Causal-Forcing for the latest download link.
-# Place the resulting causal_forcing.pt at:
-#   checkpoints/casualforcing/chunkwise/causal_forcing.pt
+huggingface-cli download zhuhz22/Causal-Forcing \
+  chunkwise/causal_forcing.pt \
+  --local-dir checkpoints/casualforcing
+# Result: checkpoints/casualforcing/chunkwise/causal_forcing.pt
 ```
 
 5. (Optional) Download our pretrained PhyMotion-CausalForcing-1.3B LoRA + the MotionX prompt splits from Hugging Face:
