@@ -1,5 +1,6 @@
 # PhyMotion: Structured 3D Motion Reward for Physics-Grounded Human Video Generation
 
+
 * Authors: [Yidong Huang](https://owenh-unc.github.io/)\*, [Zun Wang](https://zunwang1.github.io/)\*, [Han Lin](https://hl-hanlin.github.io/), [Dong-Ki Kim](https://dkkim93.github.io/), [Shayegan Omidshafiei](https://www.linkedin.com/in/shayegan/), [Jaehong Yoon](https://jaehong31.github.io/), [Jaemin Cho](https://j-min.io/), [Yue Zhang](https://zhangyuejoslin.github.io/) and [Mohit Bansal](https://www.cs.unc.edu/~mbansal/) (UNC Chapel Hill, FieldAI, NTU Singapore, AI2, Johns Hopkins University)
 
 \* Equal contribution.
@@ -237,10 +238,10 @@ This codebase builds on several excellent open-source projects. We thank the aut
 If you find this work useful, please consider citing:
 
 ```bibtex
-@article{huang2026phymotion,
+@inproceedings{huang2026phymotion,
   title={PhyMotion: Structured 3D Motion Reward for Physics-Grounded Human Video Generation},
   author={Huang, Yidong and Wang, Zun and Lin, Han and Kim, Dong-Ki and Omidshafiei, Shayegan and Yoon, Jaehong and Cho, Jaemin and Zhang, Yue and Bansal, Mohit},
-  journal={arXiv preprint arXiv:2605.14269},
+  booktitle={The Fortieth Annual Conference on Neural Information Processing Systems},
   year={2026}
 }
 ```
